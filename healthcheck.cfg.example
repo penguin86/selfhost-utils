@@ -1,0 +1,121 @@
+[DEFAULT]
+
+#### EMAIL NOTIFICATIONS
+
+# Notify this email address(es) in case of alarm, multiple addresses separated by commas
+MAILTO=root@localhost, user@localhost
+
+# Sender address
+MAILFROM=root@localhost
+
+# Use a remote SMTP host (enable by removing comment)
+#SMTPHOST=my.smtp.host:465
+
+# SMTP credentials
+#SMTPUSER=mysmtpuser
+#SMTPPASS=mysmtppass
+
+# Use SSL for SMTP
+#SMTPSSL=True
+
+
+
+#### HEALTH CHECKS ####
+# Every health check is based on a command being executed, its result being parsed with a regexp
+# to extract (as a single group) the numeric or string value, and the value being compared with
+# a configured value. This checks are ready to be used, just enable the ones you need.
+# You can add your own custom check declaring another section like this:
+#
+# [my_custom_check_name]
+# DISABLED=False
+# ALARM_STRING_EQUAL=Lorem ipsum
+# ALARM_STRING_NOT_EQUAL=The lazy fox
+# ALARM_VALUE_EQUAL=99
+# ALARM_VALUE_NOT_EQUAL=76.365338
+# ALARM_VALUE_MORE_THAN=1.0
+# ALARM_VALUE_LESS_THAN=12
+# COMMAND=/my/custom/binary --with parameters
+# REGEXP=my regex to parse (awesome|disappointing) command output
+
+[system_load_1min]
+# The system load average in the last minute
+DISABLED=True
+ALARM_VALUE_MORE_THAN=1.0
+COMMAND=uptime
+REGEXP=.*load average: (\d+[,.]\d+), \d+[,.]\d+, \d+[,.]\d+
+
+[system_load_5min]
+# The system load average in the last 5 minutes
+DISABLED=True
+ALARM_VALUE_MORE_THAN=1.0
+COMMAND=uptime
+REGEXP=.*load average: \d+[,.]\d+, (\d+[,.]\d+), \d+[,.]\d+
+
+[system_load_15min]
+# The system load average in the last 15 minutes
+DISABLED=True
+ALARM_VALUE_MORE_THAN=1.0
+COMMAND=uptime
+REGEXP=.*load average: \d+[,.]\d+, \d+[,.]\d+, (\d+[,.]\d+)
+
+[used_disk_space]
+# Used disk space (in percent, i.e. ALARM_VALUE_MORE_THAN=75 -> alarm if disk is more than 75% full)
+DISABLED=True
+ALARM_VALUE_MORE_THAN=75
+COMMAND=df -h /dev/sda1
+REGEXP=(\d{1,3})%
+
+[raid_status]
+# Issues an alarm when the raid is corrupted
+# Checks this part of the /proc/mdstat file:
+#       243553280 blocks super 1.2 [2/2] [UU]
+# If the content of the last [ ] contains only U (without _), the raid array is healty
+# Otherwise, [U_] or [_U] is displayed (may contain more U or _ if the array is more disks)
+DISABLED=True
+ALARM_STRING_NOT_EQUAL=UU
+COMMAND=cat /proc/mdstat
+REGEXP=.*\] \[([U_]+)\]\n
+
+[battery_level]
+# Issues an alarm when battery is discharging below a certain level (long blackout, pulled power cord...)
+# For laptops used as servers, apparently common among the self hosters. Requires acpi package installed.
+# Value is in %
+DISABLED=True
+COMMAND=acpi -b
+REGEXP=Battery \d: .*, (\d{1,3})%
+ALARM_VALUE_LESS_THAN=90
+
+[laptop_charger_disconnected]
+# Issues an alarm when laptop charger is disconnected
+# For laptops used as servers, apparently common among the self hosters. Requires acpi package installed.
+DISABLED=True
+COMMAND=acpi -a
+REGEXP=Adapter \d: (.+)
+ALARM_STRING_NOT_EQUAL=on-line
+
+[free_ram]
+# Free ram in %
+# Shows another approach: does all the computation in the command and picks up
+# all the output (by not declaring a regexp).
+DISABLED=True
+COMMAND=free | grep Mem | awk '{print int($4/$2 * 100.0)}'
+ALARM_VALUE_LESS_THAN=20
+
+[cpu_temperature]
+# CPU Temperature alarm: requires lm-sensors installed and configured (check your distribution's guide)
+# The regexp must be adapted to your configuration: run `sensors` in the command line
+# to find the name of the temperature sensor in your system. In this case is `Core 0`,
+# but may be called Tdie or a lot of different names, there is no standard.
+DISABLED=True
+ALARM_VALUE_MORE_THAN=80
+COMMAND=sensors
+REGEXP=Core 0: +\+?(-?\d{1,3}).\d°[CF]
+
+[fan_speed]
+# Fan speed alarm: requires lm-sensors installed and configured (check your distribution's guide)
+# The regexp must be adapted to your configuration: run `sensors` in the command line
+# to find the name of the fan speed sensor in your system.
+DISABLED=True
+ALARM_VALUE_LESS_THAN=300
+COMMAND=sensors
+REGEXP=cpu_fan: +(\d) RPM

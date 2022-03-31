@@ -1,0 +1,6 @@
+# Cron to execute health checks
+# As a security measure, the address in MAILTO will be notified 
+# if the healthcheck.py script crashes.
+
+MAILTO="your-email-address"
+* * * * *	root	/usr/local/bin/healthcheck.py /usr/local/etc/healthcheck.cfg -q
