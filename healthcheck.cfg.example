@@ -123,7 +123,7 @@ ALARM_VALUE_LESS_THAN=20
 [available_ram]
 # Like Free ram, but shows available instead of free. You may want to use this if you use a memcache.
 DISABLED=True
-COMMAND=free | grep Mem | awk '{print int($6/$2 * 100.0)}'
+COMMAND=free | grep Mem | awk '{print int($7/$2 * 100.0)}'
 ALARM_VALUE_LESS_THAN=20
 
 [cpu_temperature]
