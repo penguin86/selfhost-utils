@@ -73,6 +73,7 @@ class Main:
 
 		self.config = configparser.ConfigParser(interpolation=None)	# Disable interpolation because contains regexp
 		self.config.read(configPath)
+		self.hostname = os.uname()[1]
 
 	def run(self, dryRun):
 		''' Runs the healtg checks '''
@@ -93,7 +94,10 @@ class Main:
 				# Alarm!
 				logging.warning('Alarm for {}: {}!'.format(section, error))
 				if not dryRun:
-					self.sendMail(s, error)
+					if s.mailto:
+						self.sendMail(s, error)
+					if s.alarmCommand:
+						self.executeAlarmCommand(s, error)
 
 	# Calls the provided command, checks the value parsing it with the provided regexp
 	# and returns an error string, or null if the value is within its limits
@@ -138,18 +142,16 @@ class Main:
 			return 'value is {}, but should not exceed {}'.format(locale.atof(detectedValue), config.alarm_value_more_than)
 		if config.alarm_value_less_than and locale.atof(detectedValue) < float(config.alarm_value_less_than):
 			return 'value is {}, but should be greater than {}'.format(locale.atof(detectedValue), config.alarm_value_less_than)
-				
 
 	def sendMail(self, s, error):
 		if s.smtphost:
-			logging.info("Sending detailed logs to %s via  %s", s.mailto, s.smtphost)
+			logging.info("Sending alarm email to %s via %s", s.mailto, s.smtphost)
 		else:
-			logging.info("Sending detailed logs to %s using local smtp", s.mailto)
+			logging.info("Sending alarm email to %s using local smtp", s.mailto)
 
 		# Create main message
-		hostname = os.uname()[1]
 		msg = MIMEMultipart()
-		msg['Subject'] = EMAIL_SUBJECT_TPL.format(hostname, s.name)
+		msg['Subject'] = EMAIL_SUBJECT_TPL.format(self.hostname, s.name)
 		if s.mailfrom:
 			m_from = s.mailfrom
 		else:
@@ -161,7 +163,7 @@ class Main:
 		# Add base text
 		body = EMAIL_MESSAGE_TPL.format(
 			s.name,
-			hostname,
+			self.hostname,
 			time.strftime("%a, %d %b %Y %H:%M:%S"),
 			error
 		)
@@ -183,6 +185,25 @@ class Main:
 		smtp.sendmail(m_from, s.mailto, msg.as_string())
 		smtp.quit()
 
+	def executeAlarmCommand(self, s, error):
+		cmdToRun = s.alarmCommand
+		cmdToRun = cmdToRun.replace('%%CHECKNAME%%', s.name)
+		cmdToRun = cmdToRun.replace('%%HOSTNAME%%', self.hostname)
+		cmdToRun = cmdToRun.replace('%%DATETIME%%', time.strftime("%a, %d %b %Y %H:%M:%S"))
+		cmdToRun = cmdToRun.replace('%%ERROR%%', error)
+
+		logging.debug("Executing alarm command %s", cmdToRun)
+
+		ret = subprocess.run(cmdToRun, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+		if ret.stderr:
+			self._log.info('{} subprocess stderr:\n{}', cmdToRun, ret.stderr.decode())
+		if ret.stdout:
+			stdout = ret.stdout.decode()
+			self._log.debug('{} subprocess stdout:\n{}', cmdToRun, stdout)
+		if ret.returncode != 0:
+			self._log.error('subprocess {} exited with error code {}'.format(cmdToRun, ret.returncode))
+
+
 
 class Settings:
 	''' Represents settings for a check '''
@@ -203,9 +224,14 @@ class Settings:
 		self.smtpuser = self.getStr(name, 'SMTPUSER', None)
 		self.smtppass = self.getStr(name, 'SMTPPASS', None)
 		self.smtpssl = self.getBoolean(name, 'SMTPSSL', False)
-		## List of email address to notify about backup status (mandatory)
-		mailtoList = config.get(name, 'MAILTO')
-		self.mailto = [ x.strip() for x in mailtoList.strip().split(self.EMAIL_LIST_SEP) ]
+		## List of email address to notify in case of alarms (disabled if missing)
+		mailtoList = self.getStr(name, 'MAILTO', None)
+		if mailtoList:
+			self.mailto = [ x.strip() for x in mailtoList.strip().split(self.EMAIL_LIST_SEP) ]
+		else:
+			self.mailto = None
+		## Command to execute in case of alarms (disabled if missing)
+		self.alarmCommand = self.getStr(name, 'ALARM_COMMAND', None)
 		## Sender address for the notification email
 		self.mailfrom = self.getStr(name, 'MAILFROM', getpass.getuser()+'@'+socket.gethostname())
 		## Values to compare
@@ -231,6 +257,7 @@ class Settings:
 			return self.config.getboolean(name, key)
 		except configparser.NoOptionError:
 			return defaultValue
+
 
 
 if __name__ == '__main__':

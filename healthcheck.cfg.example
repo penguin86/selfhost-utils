@@ -1,12 +1,13 @@
 [DEFAULT]
 
-#### EMAIL NOTIFICATIONS
+#### EMAIL NOTIFICATIONS ####
 
 # Notify this email address(es) in case of alarm, multiple addresses separated by commas
+# Comment this if you don't want email to be sent (maybe because using ALARM_COMMAND below)
 MAILTO=root@localhost, user@localhost
 
 # Sender address
-MAILFROM=root@localhost
+#MAILFROM=root@localhost
 
 # Use a remote SMTP host (enable by removing comment)
 #SMTPHOST=my.smtp.host:465
@@ -18,6 +19,24 @@ MAILFROM=root@localhost
 # Use SSL for SMTP
 #SMTPSSL=True
 
+
+#### RUN COMMAND IN CASE OF ALARM ####
+# You can run a command or script when an alert is issued.
+#
+# In this example, `curl` is used to send a POST request to Ntfy (https://ntfy.sh/), a service
+# that delivers push notifications to smartphones and desktop computers.
+# If you want to use ntfy, just change the topic name with something unique (see documentation
+# at https://ntfy.sh/docs/ ), uncomment the ALARM_COMMAND entry and you are ready to go.
+# If you generate a lot of traffic, please consider hosting your own ntfy server.
+#
+# Otherwise, you can replace the curl command with anything you want, you can use the following
+# placeholders to pass your command/script the details about the event:
+# %%CHECKNAME%% The name of the check (the one between square brackets in this config)
+# %%HOSTNAME%% The host name
+# %%DATETIME%% The date and time of the event, in human readable format
+# %%ERROR%% An human readable error description (the same used in the mail alert)
+
+#ALARM_COMMAND=curl -H "%%CHECKNAME%% alarm on %%HOSTNAME%%" -d "%%ERROR%% on %%DATETIME%%" ntfy.sh/my-unique-topic-name
 
 
 #### HEALTH CHECKS ####
@@ -91,7 +110,7 @@ ALARM_VALUE_LESS_THAN=90
 DISABLED=True
 COMMAND=acpi -a
 REGEXP=Adapter \d: (.+)
-ALARM_STRING_NOT_EQUAL=on-line
+ALARM_STRING_EQUAL=off-line
 
 [free_ram]
 # Free ram in %

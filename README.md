@@ -3,19 +3,26 @@ A collection of utilities for self hosters.
 
 ## HEALTHCHECK
 A simple server health check.
-Sends an email in case of alarm.
-Meant to be run with a cron (see healthcheck.cron.example)
-Tested on Debian 11, but should run on almost any standard linux box
+Sends an email and/or executes a command in case of alarm.
+As an example, the command may be a ntfy call to obtain a notification on a mobile phone or desktop computer.
+Meant to be run with a cron (see healthcheck.cron.example).
+Tested on Debian 11, but should run on almost any standard linux box.
+
+![Email](images/healthcheck_email_notification.png)      ![Ntfy](images/healthcheck_ntfy_notification.png)
 
 ### Alarms
 Provided ready-to-use alarms in config file:
-- system load
+- cpu load
 - disk space
 - raid status
 - battery level / charger status (for laptops used as servers, apparently common among the self hosters)
 - memory status
+
+Alarms that need basic configuration to work on your system:
 - cpu temperature (needs to be adapted as every system has a different name for the sensor)
 - fan speed (needs to be adapted as every system has a different name for the sensor)
+
+... or you can write your own custom alarm!
 
 ### How does it work
 The config file contains a list of checks. The most common checks are provided in the config file, but it is possible to configure custom checks, if needed.
@@ -37,7 +44,7 @@ cp healthcheck.py /usr/local/bin/healthcheck.py
 cp healthcheck.cfg.example /usr/local/etc/healthcheck.cfg
 ```
 Edit `/usr/local/etc/healthcheck.cfg` enabling the checks you need and configuring email settings.
-Run `/usr/local/bin/healthcheck.py /usr/local/etc/healthcheck.cfg` to check it is working. If needed, change the config to make a check fail and see if the notification mail is delivered.
+Run `/usr/local/bin/healthcheck.py /usr/local/etc/healthcheck.cfg` to check it is working. If needed, change the config to make a check fail and see if the notification mail is delivered. If you need to do some testing without spamming emails, run with the parameter `--dry-run`.
 Now copy the cron file:
 ```
 cp healthcheck.cron.example /etc/cron.d/healthcheck
@@ -54,4 +61,7 @@ As stated in the `uptime` command manual:
 #### Note on temperature and fan speed checks:
 The check to run needs lm-sensors to be installed and configured. Check your distribution install guide.
 The sensors have different name in every system, so you WILL need to adapt the configuration.
- 
+Some systems have a single temperature sensors for the whole CPU, while some other has a sensor for every core. In this last case, you may want to copy the `[cpu_temperature]` config in N different configs like `[cpu_temperature_0]`, one for every core, and change the REGEX to match `Core 0`, `Core 1` and so on...
+
+# License
+This whole repository is released under GNU General Public License version 3: see http://www.gnu.org/licenses/
