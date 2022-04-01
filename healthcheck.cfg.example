@@ -120,6 +120,12 @@ DISABLED=True
 COMMAND=free | grep Mem | awk '{print int($4/$2 * 100.0)}'
 ALARM_VALUE_LESS_THAN=20
 
+[available_ram]
+# Like Free ram, but shows available instead of free. You may want to use this if you use a memcache.
+DISABLED=True
+COMMAND=free | grep Mem | awk '{print int($6/$2 * 100.0)}'
+ALARM_VALUE_LESS_THAN=20
+
 [cpu_temperature]
 # CPU Temperature alarm: requires lm-sensors installed and configured (check your distribution's guide)
 # The regexp must be adapted to your configuration: run `sensors` in the command line
