@@ -76,7 +76,7 @@ class Main:
 		self.hostname = os.uname()[1]
 
 	def run(self, dryRun):
-		''' Runs the healtg checks '''
+		''' Runs the health checks '''
 
 		for section in self.config:
 			if section == 'DEFAULT':
