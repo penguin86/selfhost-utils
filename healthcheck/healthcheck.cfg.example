@@ -43,6 +43,8 @@ MAILTO=root@localhost, user@localhost
 # Every health check is based on a command being executed, its result being parsed with a regexp
 # to extract (as a single group) the numeric or string value, and the value being compared with
 # a configured value. This checks are ready to be used, just enable the ones you need.
+#
+# CUSTOM CHECKS:
 # You can add your own custom check declaring another section like this:
 #
 # [my_custom_check_name]
@@ -55,6 +57,12 @@ MAILTO=root@localhost, user@localhost
 # ALARM_VALUE_LESS_THAN=12
 # COMMAND=/my/custom/binary --with parameters
 # REGEXP=my regex to parse (awesome|disappointing) command output
+#
+# First test your custom command executing it in the command line
+# Take the text output and write a regex to match it. Check every case:
+# success result, error result, command failure. Then paste the command
+# and regex in this config, enable the check and run to verify is working.
+
 
 [system_load_1min]
 # The system load average in the last minute
@@ -63,12 +71,14 @@ ALARM_VALUE_MORE_THAN=1.0
 COMMAND=uptime
 REGEXP=.*load average: (\d+[,.]\d+), \d+[,.]\d+, \d+[,.]\d+
 
+
 [system_load_5min]
 # The system load average in the last 5 minutes
 DISABLED=True
 ALARM_VALUE_MORE_THAN=1.0
 COMMAND=uptime
 REGEXP=.*load average: \d+[,.]\d+, (\d+[,.]\d+), \d+[,.]\d+
+
 
 [system_load_15min]
 # The system load average in the last 15 minutes
@@ -77,12 +87,14 @@ ALARM_VALUE_MORE_THAN=1.0
 COMMAND=uptime
 REGEXP=.*load average: \d+[,.]\d+, \d+[,.]\d+, (\d+[,.]\d+)
 
+
 [used_disk_space]
 # Used disk space (in percent, i.e. ALARM_VALUE_MORE_THAN=75 -> alarm if disk is more than 75% full)
 DISABLED=True
 ALARM_VALUE_MORE_THAN=75
 COMMAND=df -h /dev/sda1
 REGEXP=(\d{1,3})%
+
 
 [raid_status]
 # Issues an alarm when the raid is corrupted
@@ -95,6 +107,7 @@ ALARM_STRING_NOT_EQUAL=UU
 COMMAND=cat /proc/mdstat
 REGEXP=.*\] \[([U_]+)\]\n
 
+
 [battery_level]
 # Issues an alarm when battery is discharging below a certain level (long blackout, pulled power cord...)
 # For laptops used as servers, apparently common among the self hosters. Requires acpi package installed.
@@ -104,6 +117,7 @@ COMMAND=acpi -b
 REGEXP=Battery \d: .*, (\d{1,3})%
 ALARM_VALUE_LESS_THAN=90
 
+
 [laptop_charger_disconnected]
 # Issues an alarm when laptop charger is disconnected
 # For laptops used as servers, apparently common among the self hosters. Requires acpi package installed.
@@ -111,6 +125,7 @@ DISABLED=True
 COMMAND=acpi -a
 REGEXP=Adapter \d: (.+)
 ALARM_STRING_EQUAL=off-line
+
 
 [free_ram]
 # Free ram in %
@@ -120,11 +135,13 @@ DISABLED=True
 COMMAND=free | grep Mem | awk '{print int($4/$2 * 100.0)}'
 ALARM_VALUE_LESS_THAN=20
 
+
 [available_ram]
 # Like Free ram, but shows available instead of free. You may want to use this if you use a memcache.
 DISABLED=True
 COMMAND=free | grep Mem | awk '{print int($7/$2 * 100.0)}'
 ALARM_VALUE_LESS_THAN=20
+
 
 [cpu_temperature]
 # CPU Temperature alarm: requires lm-sensors installed and configured (check your distribution's guide)
@@ -136,6 +153,7 @@ ALARM_VALUE_MORE_THAN=80
 COMMAND=sensors
 REGEXP=Core 0: +\+?(-?\d{1,3}).\d°[CF]
 
+
 [fan_speed]
 # Fan speed alarm: requires lm-sensors installed and configured (check your distribution's guide)
 # The regexp must be adapted to your configuration: run `sensors` in the command line
@@ -144,3 +162,31 @@ DISABLED=True
 ALARM_VALUE_LESS_THAN=300
 COMMAND=sensors
 REGEXP=cpu_fan: +(\d) RPM
+
+
+[host_reachability]
+# Check if a remote host is alive with Ping. You can replace the ip with a domain name (e.g. COMMAND=ping debian.org -c 1)
+#
+# Shows another approach: uses the return value to print a string. Leverages ping's ability to return different error codes:
+# 0 = success
+# 1 = the host is unreachable
+# 2 = an error has occurred (and will be logged to stderr)
+# We are throwing away stdout and replacing it with a custom text.
+# If there is a different text (the stderr), something bad happened, and it will be reported in the mail.
+DISABLED=True
+ALARM_STRING_NOT_EQUAL=Online
+COMMAND=ping 192.168.1.123 -c 1 > /dev/null && echo "Online" || echo "Offline"
+
+
+[service_webserver]
+# Check if a webserver is running on port 80. You can replace the ip with a domain name.
+# You can check different services changing the port number. Some examples:
+# 80 HTTP Webserver
+# 443 HTTPS Webserver
+# 21 FTP
+# 22 SSH
+# 5900 VNC (Linux remote desktop)
+# 3389 RDP (Windows remote desktop)
+DISABLED=True
+ALARM_STRING_NOT_EQUAL=Online
+COMMAND=nc -z -w 3 192.168.1.123 80 > /dev/null && echo "Online" || echo "Offline"

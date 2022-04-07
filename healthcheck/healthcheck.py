@@ -112,12 +112,15 @@ class Main:
 		stdout = ""
 		ret = subprocess.run(config.command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
 		if ret.stderr:
-			self._log.info('{} subprocess stderr:\n{}', config.command, ret.stderr.decode())
+			self._log.info('{} subprocess stderr:\n{}'.format(config.command, ret.stderr.decode()))
 		if ret.stdout:
 			stdout = ret.stdout.decode()
-			self._log.debug('{} subprocess stdout:\n{}', config.command, stdout)
+			self._log.debug('{} subprocess stdout:\n{}'.format(config.command, stdout))
 		if ret.returncode != 0:
-			return 'subprocess {} exited with error code {}'.format(config.command, ret.returncode)
+			return 'the command exited with error code {} {}'.format(
+				ret.returncode,
+				'and error message "{}"'.format(ret.stderr.decode().strip()) if ret.stderr else ''
+			)
 		
 		# Parse result with regex
 		match = re.search(config.regexp, stdout, re.MULTILINE)
