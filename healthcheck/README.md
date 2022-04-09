@@ -1,5 +1,7 @@
 # HEALTHCHECK
 A simple server health check.
+Allows to keep under control the machine vitals (cpu usage, raid status, thermals...) and alter the sysadmin in case of anomalies.
+
 Sends an email and/or executes a command in case of alarm.
 As an example, the command may be a ntfy call to obtain a notification on a mobile phone or desktop computer.
 Meant to be run with a cron (see healthcheck.cron.example).
