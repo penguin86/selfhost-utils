@@ -42,6 +42,10 @@ Copy the script and the config file into the system to check:
 cp healthcheck.py /usr/local/bin/healthcheck.py
 cp healthcheck.cfg.example /usr/local/etc/healthcheck.cfg
 ```
+Make the script executable:
+```
+chmod +x /usr/local/bin/healthcheck.py
+```
 Edit `/usr/local/etc/healthcheck.cfg` enabling the checks you need and configuring email settings.
 Run `/usr/local/bin/healthcheck.py /usr/local/etc/healthcheck.cfg` to check it is working. If needed, change the config to make a check fail and see if the notification mail is delivered. If you need to do some testing without spamming emails, run with the parameter `--dry-run`.
 Now copy the cron file:
