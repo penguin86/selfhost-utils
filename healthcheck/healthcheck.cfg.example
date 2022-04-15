@@ -1,3 +1,5 @@
+# The DEFAULT section contains the global configuration applied to all checks.
+# You can re-define this variables in a check to override the global one.
 [DEFAULT]
 
 #### EMAIL NOTIFICATIONS ####
@@ -37,6 +39,21 @@ MAILTO=root@localhost, user@localhost
 # %%ERROR%% An human readable error description (the same used in the mail alert)
 
 #ALARM_COMMAND=curl -H "%%CHECKNAME%% alarm on %%HOSTNAME%%" -d "%%ERROR%% on %%DATETIME%%" ntfy.sh/my-unique-topic-name
+
+
+#### NOTIFICATION POLICY ###
+# Defines when to send the email and/or execute ALARM_COMMAND. Useful to avoid email flooding.
+# Possible values:
+# EVERY_RUN In case of alarm, sends a mail every time the script is run
+# START Sends a mail only when an alarm starts
+# ONCE_IN_MINUTES In case of alarm, resends a mail only if NOTIFY_MINUTES has passed
+NOTIFY=EVERY_RUN
+
+# Used only if NOTIFY=ONCE_IN_MINUTES. A mail is sent only if NOTIFY_MINUTES has passed from the previous one
+NOTIFY_MINUTES=60
+
+# Sends a mail when the alarm has ended
+NOTIFY_ALARM_END=TRUE
 
 
 #### HEALTH CHECKS ####
@@ -190,3 +207,10 @@ COMMAND=ping 192.168.1.123 -c 1 > /dev/null && echo "Online" || echo "Offline"
 DISABLED=True
 ALARM_STRING_NOT_EQUAL=Online
 COMMAND=nc -z -w 3 192.168.1.123 80 > /dev/null && echo "Online" || echo "Offline"
+
+
+[dummy_always_alarm]
+# A dummy check that is always in alarm. Useful for testing notifications.
+DISABLED=True
+ALARM_STRING_NOT_EQUAL=Core meltdown!
+COMMAND=echo "Core meltdown!"

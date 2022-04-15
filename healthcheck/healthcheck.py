@@ -46,13 +46,18 @@ import socket
 import getpass
 import re
 import locale
+import json
 
 
 NAME = 'healthcheck'
 VERSION = '0.1'
 DESCRIPTION = 'A simple server monitoring software'
-EMAIL_SUBJECT_TPL = 'Host {} failed health check for {}'
-EMAIL_MESSAGE_TPL = 'Alarm for sensor {} on host {} on {}: {}'
+EMAIL_START_SUBJECT_TPL = '{}: {} health alarm!'
+EMAIL_START_MESSAGE_TPL = 'Alarm for sensor {} on host {} on {}: {}'
+EMAIL_END_SUBJECT_TPL = '{}: {} OK'
+EMAIL_END_MESSAGE_TPL = 'Alarm ceased for sensor {} on host {} on {}'
+# Healthcheck saves the current status (alarms triggered, last run... in this file)
+STATUS_FILE = '/tmp/healthcheck.tmp'
 
 class Main:
 
@@ -78,6 +83,10 @@ class Main:
 	def run(self, dryRun):
 		''' Runs the health checks '''
 
+		# Load status
+		status = Status()
+
+		# Run checks based o the config
 		for section in self.config:
 			if section == 'DEFAULT':
 				continue
@@ -85,6 +94,7 @@ class Main:
 			s = Settings(section, self.config)
 			if s.disabled:
 				self._log.info('Ignoring disabled check "{}"'.format(section))
+				status.unsetAlarm(section)
 				continue
 
 			self._log.info('Checking "{}"'.format(section))
@@ -93,11 +103,37 @@ class Main:
 			if error:
 				# Alarm!
 				logging.warning('Alarm for {}: {}!'.format(section, error))
-				if not dryRun:
-					if s.mailto:
-						self.sendMail(s, error)
-					if s.alarmCommand:
-						self.executeAlarmCommand(s, error)
+				if self.shouldNotify(section, s, status):
+					status.setAlarm(section)
+					if not dryRun:
+						if s.mailto:
+							self.sendAlmStartMail(s, error)
+						if s.alarmCommand:
+							self.executeAlarmCommand(s, error)
+			elif status.getAlarmTriggeredTimestamp(section) is not None:
+				logging.info('Alarm ceased for {}: OK!'.format(section))
+				if s.notify_alarm_end:
+					self.sendAlmEndMail(s)
+				status.unsetAlarm(section)
+
+		# Save updated status
+		status.save()
+
+	def shouldNotify(self, section, settings, status):
+		almTriggeredTime = status.getAlarmTriggeredTimestamp(section)
+		# Notify if alarm just started
+		if almTriggeredTime is None:
+			return True
+
+		# Notify if NOTIFY=EVERY_RUN
+		if settings.notify == 'EVERY_RUN':
+			return True
+
+		# Notify if time elapsed
+		if settings.notify == 'ONCE_IN_MINUTES' and (time.time() - almTriggeredTime) > (settings.notify_minutes * 60):
+			return True
+
+		return False
 
 	# Calls the provided command, checks the value parsing it with the provided regexp
 	# and returns an error string, or null if the value is within its limits
@@ -146,15 +182,34 @@ class Main:
 		if config.alarm_value_less_than and locale.atof(detectedValue) < float(config.alarm_value_less_than):
 			return 'value is {}, but should be greater than {}'.format(locale.atof(detectedValue), config.alarm_value_less_than)
 
-	def sendMail(self, s, error):
+	def sendAlmStartMail(self, s, error):
+		subject = EMAIL_START_SUBJECT_TPL.format(self.hostname, s.name)
+		body = EMAIL_START_MESSAGE_TPL.format(
+			s.name,
+			self.hostname,
+			time.strftime("%a, %d %b %Y %H:%M:%S"),
+			error
+		)
+		self.sendMail(s, subject, body)
+
+	def sendAlmEndMail(self, s):
+		subject = EMAIL_END_SUBJECT_TPL.format(self.hostname, s.name)
+		body = EMAIL_END_MESSAGE_TPL.format(
+			s.name,
+			self.hostname,
+			time.strftime("%a, %d %b %Y %H:%M:%S")
+		)
+		self.sendMail(s, subject, body)
+
+	def sendMail(self, s, subject, body):
 		if s.smtphost:
-			logging.info("Sending alarm email to %s via %s", s.mailto, s.smtphost)
+			logging.info("Sending email to %s via %s", s.mailto, s.smtphost)
 		else:
-			logging.info("Sending alarm email to %s using local smtp", s.mailto)
+			logging.info("Sending email to %s using local smtp", s.mailto)
 
 		# Create main message
 		msg = MIMEMultipart()
-		msg['Subject'] = EMAIL_SUBJECT_TPL.format(self.hostname, s.name)
+		msg['Subject'] = subject
 		if s.mailfrom:
 			m_from = s.mailfrom
 		else:
@@ -164,12 +219,6 @@ class Main:
 		msg.preamble = 'This is a multi-part message in MIME format.'
 
 		# Add base text
-		body = EMAIL_MESSAGE_TPL.format(
-			s.name,
-			self.hostname,
-			time.strftime("%a, %d %b %Y %H:%M:%S"),
-			error
-		)
 		txt = MIMEText(body)
 		msg.attach(txt)
 
@@ -206,6 +255,34 @@ class Main:
 		if ret.returncode != 0:
 			self._log.error('subprocess {} exited with error code {}'.format(cmdToRun, ret.returncode))
 
+
+class Status:
+	''' Represents the current status (alarms triggered, last run...) '''
+
+	def __init__(self):
+		try:
+			with open(STATUS_FILE, 'r') as openfile:
+				self.status = json.load(openfile)
+		except FileNotFoundError:
+			self.status =  {
+				'lastRun': 0,	# unix time in seconds
+				'alarms': {},	# key-value, alarmName : alarmTriggeredTimestamp
+			}
+
+	def save(self):
+		self.status['lastRun'] = time.time()
+		jo = json.dumps(self.status)
+		with open(STATUS_FILE, "w") as outfile:
+			outfile.write(jo)
+
+	def setAlarm(self, almName):
+		self.status['alarms'][almName] = time.time()
+
+	def unsetAlarm(self, almName):
+		self.status['alarms'].pop(almName, None)
+
+	def getAlarmTriggeredTimestamp(self, almName):
+		return self.status['alarms'].get(almName, None)
 
 
 class Settings:
@@ -244,6 +321,10 @@ class Settings:
 		self.alarm_value_not_equal = self.getStr(name, 'ALARM_VALUE_NOT_EQUAL', None)
 		self.alarm_value_more_than = self.getStr(name, 'ALARM_VALUE_MORE_THAN', None)
 		self.alarm_value_less_than = self.getStr(name, 'ALARM_VALUE_LESS_THAN', None)
+		## Notification policy
+		self.notify = self.getEnum(name, 'NOTIFY', 'EVERY_RUN', ['EVERY_RUN', 'START', 'ONCE_IN_MINUTES'])
+		self.notify_minutes = self.getInt(name, 'NOTIFY_MINUTES', 0)
+		self.notify_alarm_end = self.getBoolean(name, 'NOTIFY_ALARM_END', True)
 		## Command to obtain the value for comparation
 		self.command = self.getStr(name, 'COMMAND', None)
 		## Regexp to extract value from command output (default to match full string)
@@ -255,12 +336,20 @@ class Settings:
 		except configparser.NoOptionError:
 			return defaultValue
 
+	def getInt(self, name, key, defaultValue):
+		return int(self.getStr(name, key, defaultValue))
+
 	def getBoolean(self, name, key, defaultValue):
 		try:
 			return self.config.getboolean(name, key)
 		except configparser.NoOptionError:
 			return defaultValue
 
+	def getEnum(self, name, key, defaultValue, values):
+		val = self.getStr(name, key, defaultValue)
+		if not val in values:
+			raise ValueError("Invalid value {} for configuration {}: expected one of {}".format(val, key, ', '.join(values)))
+		return val
 
 
 if __name__ == '__main__':
