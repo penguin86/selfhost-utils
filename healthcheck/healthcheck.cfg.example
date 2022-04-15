@@ -212,5 +212,5 @@ COMMAND=nc -z -w 3 192.168.1.123 80 > /dev/null && echo "Online" || echo "Offlin
 [dummy_always_alarm]
 # A dummy check that is always in alarm. Useful for testing notifications.
 DISABLED=True
-ALARM_STRING_NOT_EQUAL=Core meltdown!
+ALARM_STRING_EQUAL=Core meltdown!
 COMMAND=echo "Core meltdown!"
