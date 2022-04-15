@@ -52,9 +52,9 @@ import json
 NAME = 'healthcheck'
 VERSION = '0.1'
 DESCRIPTION = 'A simple server monitoring software'
-EMAIL_START_SUBJECT_TPL = '{}: {} health alarm!'
+EMAIL_START_SUBJECT_TPL = '\U0001F6A8 {}: {} ALARM!'
 EMAIL_START_MESSAGE_TPL = 'Alarm for sensor {} on host {} on {}: {}'
-EMAIL_END_SUBJECT_TPL = '{}: {} OK'
+EMAIL_END_SUBJECT_TPL = '\u2705 {}: {} OK'
 EMAIL_END_MESSAGE_TPL = 'Alarm ceased for sensor {} on host {} on {}'
 # Healthcheck saves the current status (alarms triggered, last run... in this file)
 STATUS_FILE = '/tmp/healthcheck.tmp'
