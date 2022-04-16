@@ -7,7 +7,9 @@ As an example, the command may be a ntfy call to obtain a notification on a mobi
 Meant to be run with a cron (see healthcheck.cron.example).
 Tested on Debian 11, but should run on almost any standard linux box.
 
-![Email](../images/healthcheck_email_notification.png)      ![Ntfy](../images/healthcheck_ntfy_notification.png)
+![Email](../images/healthcheck_email_notification.png)
+
+![Ntfy](../images/healthcheck_ntfy_notification.png)
 
 ## Alarms
 Provided ready-to-use alarms in config file:
