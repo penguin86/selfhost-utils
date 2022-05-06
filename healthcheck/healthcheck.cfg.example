@@ -205,3 +205,14 @@ COMMAND=nc -z -w 3 192.168.1.123 80 > /dev/null && echo "Online" || echo "Offlin
 DISABLED=True
 ALARM_STRING_EQUAL=Core meltdown!
 COMMAND=echo "Core meltdown!"
+
+
+[security_updates_available]
+# Checks for security updates via apt (works on Debian and derivatives, like Ubuntu).
+# Needs the repositories to be updated with `apt update`, but is an heavy command, so it may
+# be configured to be executed daily in a command in the same cron of healthcheck.
+# E.g.: place this string in /etc/cron.d/healthcheck, before the healthcheck command:
+# 	1 1 * * *       root    apt update
+DISABLED=True
+ALARM_STRING_EQUAL=security updates available
+COMMAND=apt list --upgradable 2>/dev/null | grep -e "-security" && echo "security updates available" || echo "NO security updates available"

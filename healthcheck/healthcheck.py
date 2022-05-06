@@ -67,7 +67,7 @@ class Main:
 		systemLocale = os.getenv('LANG')
 		if not systemLocale:
 			raise ValueError('System environment variabile $LANG is not set!')
-		
+
 		locale.setlocale(locale.LC_ALL, systemLocale)
 
 		''' Reads the config '''
@@ -143,7 +143,7 @@ class Main:
 			return "bad config: COMMAND is mandatory"
 		if not config.regexp:
 			return "bad config: REGEXP is mandatory"
-		
+
 		# Run command
 		stdout = ""
 		ret = subprocess.run(config.command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
@@ -157,7 +157,7 @@ class Main:
 				ret.returncode,
 				'and error message "{}"'.format(ret.stderr.decode().strip()) if ret.stderr else ''
 			)
-		
+
 		# Parse result with regex
 		match = re.search(config.regexp, stdout, re.MULTILINE)
 		if not match:
