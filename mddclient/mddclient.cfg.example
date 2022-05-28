@@ -1,0 +1,30 @@
+# The DEFAULT section contains the main domain config.
+[DEFAULT]
+
+# Dynamic DNS Server
+SERVER=infomaniak.com
+LOGIN=myUserName
+PASSWORD=mySuperSecretPassword
+
+# Main domain
+DOMAIN=mysite.cloud
+
+# If multiple subdomains are served from the same public url
+# (the same fiber/DSL account) it is possible to optimize the
+# domain updates: when the main one results already up-to-date,
+# the others are not updated.
+OPTIMIZE_API_CALLS=True
+
+[matrix]
+# The matrix.mysite.cloud subdomain
+# This will be updated only if the main domain needed update
+# (or the OPTIMIZE_API_CALLS setting is disabled)
+DISABLED=True
+DOMAIN=matrix.mysite.cloud
+
+[mastodon]
+# The mastodon.mysite.cloud subdomain
+# This will be updated only if the main domain needed update
+# (or the OPTIMIZE_API_CALLS setting is disabled)
+DISABLED=True
+DOMAIN=mastodon.mysite.cloud
