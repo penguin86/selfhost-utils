@@ -1,10 +1,13 @@
 # MDDCLIENT
-It's a client for dynamic DNS services like Infomaniak's.
-Like [ddclient](https://github.com/ddclient/ddclient), but supports sending multiple updates for different domains.
-I developed this because [Infomaniak's DynDns APIS](https://www.infomaniak.com/en/support/faq/2376/dyndns-updating-a-dynamic-dns-via-the-api) doesn't support multiple domains updates on the same call. So, even if ddclient was supported for a single domain, it was needed to setup multiple instances to update multiple domains (or subdomains) on the same machine.
+It's a client for `dyndns2` protocol: it is used to interact with dynamic DNS services like Dyn or Infomaniak's.
+Updates the IP assigned for a domain, allows the use of dynamic ip internet access (commin in residential contexts like DSL, Fiber, 5G...) for hosting services.
+Like [ddclient](https://github.com/ddclient/ddclient), but updates multiple domaing with multiple REST calls.
+
+I developed this because [Infomaniak's DynDns APIS](https://www.infomaniak.com/en/support/faq/2376/dyndns-updating-a-dynamic-dns-via-the-api) doesn't support multiple domains updates on the same call. So, even if ddclient was supported for a single domain, in case of multiple (sub)domains it was needed to setup multiple instances to update them all on the same machine.
 
 ## Compatibility
-I wrote this to solve the multiple domain update problem on Infomainak, but should work for every other provider supporting the original ddclient.
+Works for any provider supporting `dyndns2` protocol. Was implemented following (this documentation)[https://help.dyn.com/remote-access-api/].
+I wrote this to solve the multiple domain update problem on Infomainak.
 
 ## Use case
 Let's say we have our Nextcloud instance on `https://mysite.cloud`. As self hosters, we run this instance on our server at home, behind our fiber or DSL provider with a dynamic IP. We need to use ddclient to keep the dynamic DNS updated, so the requests to `https://mysite.cloud` are sent to our current IP, that may change in any moment.
@@ -22,15 +25,29 @@ Make the script executable:
 ```
 chmod +x /usr/local/bin/mddclient.py
 ```
-Edit `/usr/local/etc/mddclient.cfg` setting up the server url, username, password and the main domain to update. If you have other domains or subdomains running on the same fiber/dsl, configure them in the subsections as shown in the config example.
+Edit `/usr/local/etc/mddclient.cfg` setting up the server url, username, password and the domains to update. If you have multiple domains or subdomains running on the same fiber/dsl, configure them, one for subsection as shown in the config example.
 Run `/usr/local/bin/mddclient.py /usr/local/etc/mddclient.cfg` to check it is working.
-Now copy the cron file:
+Now copy the cron file (it runs mddclient every 5 minutes):
 ```
 cp mddclient.cron.example /etc/cron.d/mddclient
 ```
 For increased safety, edit the cron file placing your email address in MAILTO var to be notified in case of mddclient.py catastrophic failure.
 
-Setup is now complete: the cron runs the script every minute and updates the dns.
+Setup is now complete: the cron runs the script every five minutes and updates the dns.
+
+## Check status
+Some status informations are available with the -s flag:
+```
+root@myhost# /usr/local/bin/mddclient.py /usr/local/etc/mddclient.cfg -s
+
+lastRun: 2022-05-31 10:40:17.006371
+lastRunSuccess: True
+lastUpdate: 2022-05-31 10:23:38.510386
+lastIpAddr: 151.41.52.133
+```
 
 ## Optimization
-If multiple subdomains are served from the same public url (the same fiber/DSL account) it is possible to optimize the domain updates: when the main one results already up-to-date, the others are not updated. This feature is enabled by default, but can be disabled setting OPTIMIZE_API_CALLS to false in the config.
+As the update requests are subject to rate limit, the script checks the current IP against Dyn's checkip tool and updates only when necessary. To force an update, use the -f flag.
+
+## Thanks
+Thanks to `dyndns.org` for the (checkip)[https://help.dyn.com/remote-access-api/checkip-tool/] tool returning current public IP address.

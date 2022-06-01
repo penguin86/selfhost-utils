@@ -15,6 +15,13 @@ Place a cron entry like this one:
 
 * * * * *     root    python3 /usr/local/bin/mddclient.py /usr/local/etc/mddclient.cfg
 
+Exit codes:
+0: success
+1: unmanaged error (crash)
+2: managed error (could not update due to bad config/server error)
+
+For more informations on dyndns2 protocol: https://help.dyn.com/remote-access-api/
+
 @author Daniele Verducci <daniele.verducci@ichibi.eu>
 
 This program is free software: you can redistribute it and/or modify
@@ -34,11 +41,21 @@ import sys
 import logging
 import configparser
 import traceback
+import requests
+import re
+import datetime
+import json
 
 
 NAME = 'mddclient'
 VERSION = '0.1'
 DESCRIPTION = 'A DynamicDns client like ddclient, but supporting multiple (sub)domains'
+STATUS_FILE = '/tmp/mddclient.tmp'
+CHECKIP_REQUEST_ADDR = 'http://checkip.dyndns.org'
+CHECKIP_RESPONSE_PARSER = '<body>Current IP Address: (\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3})</body>'
+DDCLIENT2_REQUEST_ADDR = "https://{}/nic/update?system=dyndns&hostname={}&myip={}"
+DDCLIENT2_RESPONSE_PARSER = '^(nochg|good) (\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3})$'
+USER_AGENT = 'Selfhost Utils Mddclient ' + VERSION
 
 class Main:
 
@@ -52,39 +69,161 @@ class Main:
 		self.config = configparser.ConfigParser()
 		self.config.read(configPath)
 
-	def run(self):
+	def run(self, force, printStatusAndExit):
 		''' Makes the update requests '''
 
-		for section in self.config:
-			if section == 'DEFAULT':
-				# Main domain
-				# TODO
-				continue
+		# Load status
+		status = Status()
 
+		if printStatusAndExit:
+			status.print()
+			return True
+
+		# Check current ip
+		currentIp = self.getCurrentIp()
+		if (currentIp == None):
+			return False
+
+		self._log.info('Current ip is {}'.format(currentIp))
+
+		if currentIp == status.getIp():
+			self._log.info('Ip is up-to-date.')
+			if force:
+				self._log.info('User requested forced refresh.')
+			else:
+				self._log.info('Nothing to do.')
+				status.save(True, False)
+				return
+
+		success = True
+		updated = False
+		for section in self.config:
 			s = Settings(section, self.config)
-			if s.disabled:
-				self._log.info('Ignoring disabled domain "{}"'.format(section))
+			if s.name == 'DEFAULT':
 				continue
 
 			self._log.info('Updating "{}"'.format(section))
+			try:
+				newIpAddr = self.update(s.ddserver, s.dduser, s.ddpass, s.domain, currentIp)
+				self._log.info('Success update {} to addr {}'.format(s.domain, newIpAddr))
+				updated = True
+			except Exception as e:
+				self._log.error('Error while updating {}: {}'.format(s.domain, e))
+				success = False
 
-			# TODO: subdomain update request
+		# Save current ip
+		if success:
+			status.setIp(currentIp)
+
+		status.save(success, updated)
+
+		return success
+
+	def getCurrentIp(self):
+		'''Obtains current IP from checkip.dyndns.org'''
+		response = requests.get(CHECKIP_REQUEST_ADDR)
+
+		match = re.search(CHECKIP_RESPONSE_PARSER, response.text, re.MULTILINE)
+		if not match:
+			self._log.error('Unable to obtain new IP addr: Response format not valid: {}'.format(response.text))
+			return
+		groups = match.groups()
+		if len(groups) != 1:
+			self._log.error('Unable to obtain new IP addr: Unable to parse response: {}'.format(response.text))
+			return
+
+		return groups[0]
+
+	def update(self, server, user, password, domain, ip):
+		apiUrl = DDCLIENT2_REQUEST_ADDR.format(server, domain, ip)
+		try:
+			response = requests.get(apiUrl, auth=(user, password), headers={"User-Agent": USER_AGENT})
+		except requests.ConnectionError:
+			raise Exception('Server {} is unreachable'.format(server))
+
+		match = re.search(DDCLIENT2_RESPONSE_PARSER, response.text)
+		if not match:
+			raise Exception('Response format not valid: {}'.format(response.text))
+		groups = match.groups()
+		if len(groups) != 2:
+			raise Exception('Unable to parse response: {}'.format(response.text))
+
+		operationResult = groups[0]
+		ipAddr = groups[1]
+
+		# Check operation result and return appropriate errors
+		if operationResult == 'good':
+			# Success!
+			return ipAddr
+		elif operationResult == 'nochg':
+			# Should not happen: IP didn't need update
+			self._log.warning('Ip addres didn\'t need update: this should happen only at first run')
+			return ipAddr
+		elif operationResult == 'badauth':
+			raise Exception('The username and password pair do not match a real user')
+		elif operationResult == '!donator':
+			raise Exception('Option available only to credited users, but the user is not a credited user')
+		elif operationResult == 'notfqdn':
+			raise Exception('The hostname specified is not a fully-qualified domain name (not in the form hostname.dyndns.org or domain.com).')
+		elif operationResult == 'nohost':
+			raise Exception('The hostname specified does not exist in this user account')
+		elif operationResult == 'numhost':
+			raise Exception('Too many hosts specified in an update')
+		elif operationResult == 'abuse':
+			raise Exception('The hostname specified is blocked for update abuse')
+		elif operationResult == 'badagent':
+			raise Exception('The user agent was not sent or HTTP method is not permitted')
+		elif operationResult == 'dnserr':
+			raise Exception('DNS error encountered')
+		elif operationResult == '911':
+			raise Exception('There is a problem or scheduled maintenance on server side')
+		else:
+			raise Exception('Server returned an unknown result code: {}}'.format(operationResult))
+
+
+class Status:
+	''' Represents the current status '''
+
+	def __init__(self):
+		try:
+			with open(STATUS_FILE, 'r') as openfile:
+				self.status = json.load(openfile)
+		except FileNotFoundError:
+			self.status =  {
+				'lastRun': None,
+				'lastRunSuccess': None,
+				'lastUpdate': None,
+				'lastIpAddr': None,
+			}
+
+	def save(self, success, updated):
+		self.status['lastRun'] = str(datetime.datetime.now())
+		self.status['lastRunSuccess'] = success
+		if updated:
+			self.status['lastUpdate'] = str(datetime.datetime.now())
+		jo = json.dumps(self.status)
+		with open(STATUS_FILE, "w") as outfile:
+			outfile.write(jo)
+
+	def setIp(self, ip):
+		self.status['lastIpAddr'] = ip
+
+	def getIp(self):
+		return self.status['lastIpAddr']
+
+	def print(self):
+		for k in self.status:
+			print('{}: {}'.format(k, self.status[k]))
 
 
 class Settings:
-	''' Represents settings for a check '''
-
-	EMAIL_LIST_SEP = ','
+	''' Represents settings for a domain '''
 
 	def __init__(self, name, config):
 		self.config = config
 
 		## Section name
 		self.name = name
-		
-		## Settings
-		self.disabled = self.getBoolean(name, 'DISABLED', False)
-		self.optimize = self.getBoolean(name, 'OPTIMIZE_API_CALLS', True)
 
 		## DynDNS server data
 		self.ddserver = self.getStr(name, 'SERVER', None)
@@ -117,20 +256,23 @@ if __name__ == '__main__':
 	)
 	parser.add_argument('configFile', help="configuration file path")
 	parser.add_argument('-q', '--quiet', action='store_true', help="suppress non-essential output")
+	parser.add_argument('-f', '--force', action='store_true', help="force update")
+	parser.add_argument('-s', '--status', action='store_true', help="print current status and exit doing nothing")
 	args = parser.parse_args()
 
 	if args.quiet:
 		level = logging.WARNING
 	else:
 		level = logging.INFO
-	logging.basicConfig(level=level)
+	logging.basicConfig(level=level, format='%(asctime)s %(message)s')
 
 	try:
 		main = Main(args.configFile)
-		main.run()
+		if not main.run(args.force, args.status):
+			sys.exit(2)
 	except Exception as e:
 		logging.critical(traceback.format_exc())
-		print('ERROR: {}'.format(e))
+		print('FATAL ERROR: {}'.format(e))
 		sys.exit(1)
 
 	sys.exit(0)

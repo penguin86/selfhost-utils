@@ -17,5 +17,10 @@ Tested on Debian 11, but should run on almost any standard linux box.
 
 Please see [healthcheck documentation](healthcheck/README.md)
 
+## MDDCLIENT
+A DynDns2 client supporting multiple domains with individual API calls. Developed to allow updating multiple (sub)domains on Infomaniak dynamic DNS, that supports only one domain per request. Works with any provider supporting DynDns2 protocol.
+
+Please see [mddclient documentation](mddclient/README.md)
+
 # License
 This whole repository is released under GNU General Public License version 3: see http://www.gnu.org/licenses/

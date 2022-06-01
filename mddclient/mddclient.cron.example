@@ -1,6 +1,6 @@
 # Cron to execute mddclient
-# As a security measure, the address in MAILTO will be notified 
+# As a security measure, the address in MAILTO will be notified
 # if the mddclient.py script crashes.
 
 MAILTO="your-email-address"
-* * * * *	root	/usr/local/bin/mddclient.py /usr/local/etc/mddclient.cfg -q
+*/5 * * * *	root	/usr/local/bin/mddclient.py /usr/local/etc/mddclient.cfg -q >> /var/log/mddclient.log 2>&1

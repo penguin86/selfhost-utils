@@ -1,4 +1,5 @@
-# The DEFAULT section contains the main domain config.
+# The DEFAULT section contains the config common to all subsections.
+# Redefining a value in a subsection overrides the DEFAULT's one.
 [DEFAULT]
 
 # Dynamic DNS Server
@@ -6,25 +7,22 @@ SERVER=infomaniak.com
 LOGIN=myUserName
 PASSWORD=mySuperSecretPassword
 
+[mysite]
 # Main domain
 DOMAIN=mysite.cloud
 
-# If multiple subdomains are served from the same public url
-# (the same fiber/DSL account) it is possible to optimize the
-# domain updates: when the main one results already up-to-date,
-# the others are not updated.
-OPTIMIZE_API_CALLS=True
-
 [matrix]
 # The matrix.mysite.cloud subdomain
-# This will be updated only if the main domain needed update
-# (or the OPTIMIZE_API_CALLS setting is disabled)
-DISABLED=True
 DOMAIN=matrix.mysite.cloud
 
 [mastodon]
 # The mastodon.mysite.cloud subdomain
-# This will be updated only if the main domain needed update
-# (or the OPTIMIZE_API_CALLS setting is disabled)
-DISABLED=True
 DOMAIN=mastodon.mysite.cloud
+
+[mysite2]
+# Another domain, but this is provided by another dynamicdns service
+# so we re-define server, login and password to override the DEFAULT ones
+SERVER=anotherdyndns.com
+LOGIN=anotherUserName
+PASSWORD=anotherSuperSecretPassword
+DOMAIN=mysite2.io
