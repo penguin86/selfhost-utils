@@ -1,4 +1,4 @@
-# HEALTHCHECK
+# 🚨 HEALTHCHECK
 A simple server health check.
 Allows to keep under control the machine vitals (cpu usage, raid status, thermals...) and alert the sysadmin in case of anomalies.
 

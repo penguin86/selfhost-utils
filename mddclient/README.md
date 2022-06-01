@@ -1,4 +1,4 @@
-# MDDCLIENT
+# 🖥 MDDCLIENT
 It's a client for `dyndns2` protocol: it is used to interact with dynamic DNS services like Dyn or Infomaniak's.
 Updates the IP assigned for a domain, allows the use of dynamic ip internet access (commin in residential contexts like DSL, Fiber, 5G...) for hosting services.
 Like [ddclient](https://github.com/ddclient/ddclient), but updates multiple domaing with multiple REST calls.
