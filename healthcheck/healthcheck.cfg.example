@@ -218,3 +218,31 @@ ALARM_STRING_EQUAL=security updates available
 REGEXP=(security updates available|NO security updates available)
 COMMAND=apt list --upgradable 2>/dev/null | grep -e "-security" && echo "security updates available" || echo "NO security updates available"
 NOTIFY=START
+
+
+[ups_power]
+# Raises an alarm when UPS runs on battery.
+# Requires NUT installed and configured on the system
+# See complete documentation and support lists: https://networkupstools.org
+# See simple start-up guide for Debian: https://wiki.debian.org/nut
+# This config is for usbhid-ups driver. If you use a different driver, you may need
+# to change the REGEXP to fit your output.
+DISABLED=True
+ALARM_STRING_NOT_EQUAL=OL
+COMMAND=upsc eaton1600 2> /dev/null
+REGEXP=^ups\.status: (OL|OB)$
+NOTIFY=START
+
+[ups_battery]
+# Raises an alarm when UPS battery is discharged below 50%.
+# Requires NUT installed and configured on the system
+# See complete documentation and support lists: https://networkupstools.org
+# See simple start-up guide for Debian: https://wiki.debian.org/nut
+# This config is for usbhid-ups driver. If you use a different driver, you may need
+# to change the REGEXP to fit your output.
+DISABLED=True
+ALARM_VALUE_LESS_THAN=50
+COMMAND=upsc eaton1600 2> /dev/null
+REGEXP=^battery\.charge: (\d{1,3})$
+NOTIFY=ONCE_IN_MINUTES
+NOTIFY_MINUTES=15
