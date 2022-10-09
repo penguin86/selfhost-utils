@@ -169,7 +169,7 @@ REGEXP=Core 0: +\+?(-?\d{1,3}).\d°[CF]
 DISABLED=True
 ALARM_VALUE_LESS_THAN=300
 COMMAND=sensors
-REGEXP=cpu_fan: +(\d) RPM
+REGEXP=cpu_fan: +(\d+) RPM
 
 
 [host_reachability]
