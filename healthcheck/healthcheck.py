@@ -112,7 +112,7 @@ class Main:
 							self.executeAlarmCommand(s, error)
 			elif status.getAlarmTriggeredTimestamp(section) is not None:
 				logging.info('Alarm ceased for {}: OK!'.format(section))
-				if s.notify_alarm_end:
+				if s.notify_alarm_end and not dryRun and s.mailto:
 					self.sendAlmEndMail(s)
 				status.unsetAlarm(section)
 
