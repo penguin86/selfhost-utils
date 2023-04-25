@@ -121,7 +121,11 @@ class Main:
 
 	def getCurrentIp(self):
 		'''Obtains current IP from checkip.dyndns.org'''
-		response = requests.get(CHECKIP_REQUEST_ADDR)
+		try:
+			response = requests.get(CHECKIP_REQUEST_ADDR)
+		except Exception as e:
+			self._log.error('Unable to obtain new IP addr: connection error: {}'.format(e))
+			return
 
 		match = re.search(CHECKIP_RESPONSE_PARSER, response.text, re.MULTILINE)
 		if not match:
