@@ -144,6 +144,21 @@ REGEXP=Adapter \d: (.+)
 ALARM_STRING_EQUAL=off-line
 
 
+[shutdown_on_battery_low]
+# For laptops used as a a server. Requires acpi package installed.
+# When the battery is low, shuts down cleanly the system instead of waiting for it
+# to shut down itself leaving all filesystems dirty.
+# ALARM_COMMAND is the command executed when this check fails. Shuts down the system in
+# 15 mins to allow for logging in and cancel the command. If you want to shut down
+# immediately, replace the ALARM_COMMAND with "shutdown now".
+# To cancel the shutdown, log in and "shutdown -c".
+DISABLED=True
+COMMAND=acpi -b
+REGEXP=Battery \d: .*, (\d{1,3})%
+ALARM_VALUE_LESS_THAN=50
+ALARM_COMMAND=shutdown +15 "Shutdown in 15 mins due to battery low!"
+
+
 [available_ram]
 # Shows available ram in %.
 DISABLED=False
