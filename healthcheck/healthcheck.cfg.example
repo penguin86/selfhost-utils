@@ -154,7 +154,7 @@ ALARM_STRING_EQUAL=off-line
 # To cancel the shutdown, log in and "shutdown -c".
 DISABLED=True
 COMMAND=acpi -b
-REGEXP=Battery \d: .*, (\d{1,3})%
+REGEXP=REGEXP=Battery \d: Discharging, (\d{1,3})%
 ALARM_VALUE_LESS_THAN=50
 ALARM_COMMAND=shutdown +15 "Shutdown in 15 mins due to battery low!"
 
