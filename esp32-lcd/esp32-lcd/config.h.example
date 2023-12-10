@@ -1,0 +1,15 @@
+/**
+	CONFIGURATION FILE
+	Change the values in this file and rename it "config.h" before uploading the code to the board.
+*/
+
+#ifndef CONFIG_H
+#define CONFIG_H
+
+const char* WIFI_SSID = "Squicky";
+const char* WIFI_PASSWORD = "SediaChinita@Terrazzo2017";
+const unsigned int DISPLAY_WIDTH = 16;
+const unsigned int DISPLAY_HEIGHT = 2;
+
+#endif
+

@@ -3,9 +3,12 @@
 #include <WebServer.h>
 #include <ESPmDNS.h>
 #include <LiquidCrystal.h>
+#include "config.h"
 
-const char* ssid = "ichibi";
-const char* password = "uffobaruffo";
+// ------- Configuration is in config.h file -------
+
+const int WEBSERVER_PORT = 80;
+const char* WEBSERVER_MESSAGE_PARAM = "message";
 
 /*
  
@@ -30,19 +33,25 @@ LCD Pin –>ESP32 Pins
 
  */
 
-WebServer server(80);
-
-// Init lcd
+WebServer server(WEBSERVER_PORT); // Server on port 80
 LiquidCrystal lcd(19, 23, 18, 17, 16, 15);
-
 const int led = 13;
+
+void lcdPrintMultilineMessage(String message) {
+  lcd.clear();
+  int startFrom = 0;
+  for (int i=0; i<DISPLAY_HEIGHT; i++) {
+    lcd.setCursor(0,i);
+    lcd.print(
+      message.substring(startFrom, startFrom + DISPLAY_WIDTH)
+    );
+    startFrom += DISPLAY_WIDTH;
+  }
+}
 
 void handleRoot() {
   digitalWrite(led, 1);
-  lcd.clear();
-  for (uint8_t i = 0; i < server.args(); i++) {
-    lcd.print(server.arg(i));
-  }
+  lcdPrintMultilineMessage(server.arg(WEBSERVER_MESSAGE_PARAM));
   server.send(200, "text/plain", "ok");
   digitalWrite(led, 0);
 }
@@ -65,18 +74,25 @@ void handleNotFound() {
 }
 
 void setup(void) {
-  // set up the LCD's number of columns and rows:
-  lcd.begin(16, 2);
-  // Print a message to the LCD.
-  lcd.print("Connecting to wifi...");
+  // LCD: set up
+  lcd.begin(DISPLAY_WIDTH, DISPLAY_HEIGHT);
 
-  // Init
+  // SERIAL: set up
+  Serial.begin(115200);
+  Serial.println("");
+
+  // STATUS LED: set up
   pinMode(led, OUTPUT);
   digitalWrite(led, 0);
-  Serial.begin(115200);
+  
+  // LCD: Show SSID
+  lcd.print("Conn to wifi...");
+  lcd.setCursor(0,1);
+  lcd.print(WIFI_SSID);
+
+  // Connect to wifi
   WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, password);
-  Serial.println("");
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
   // Wait for connection
   while (WiFi.status() != WL_CONNECTED) {
@@ -85,12 +101,14 @@ void setup(void) {
   }
   Serial.println("");
   Serial.print("Connected to ");
-  Serial.println(ssid);
+  Serial.println(WIFI_SSID);
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
 
-  // Print to LCD
+  // Print IP addr to LCD
   lcd.clear();
+  lcd.print("Connected! IP:");
+  lcd.setCursor(0,1);
   lcd.print(WiFi.localIP());
 
   if (MDNS.begin("esp32")) {
@@ -108,13 +126,4 @@ void setup(void) {
 void loop(void) {
   server.handleClient();
   delay(2);//allow the cpu to switch to other tasks
-
-
-
-  
-  // set the cursor to column 0, line 1
-  // (note: line 1 is the second row, since counting begins with 0):
-  lcd.setCursor(0, 1);
-  // print the number of seconds since reset:
-  lcd.print(millis() / 1000);
 }
