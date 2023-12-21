@@ -29,7 +29,9 @@ Please see [mddclient documentation](mddclient/README.md)
 
 A status LCD for your homelab! Low cost (about 20€ in parts), simple to build (no circuit board, no components, only an LCD, a ESP32 and, if needed, a potentiometer). Connects to your local wifi and receives HTTP requests from your homelab machines, and shows them to the screen.
 
-![ESP32-LCD prototype](../images/esp32-lcd.jpg)
+![ESP32-LCD prototype](images/esp32-lcd.jpg)
+
+Please see [ESP32-LCD documentation](esp32-lcd/README.md)
 
 # License
 This whole repository is released under GNU General Public License version 3: see http://www.gnu.org/licenses/
