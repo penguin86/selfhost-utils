@@ -33,7 +33,9 @@ PIN14 D7	GPIO15
 PIN15 A		5V
 PIN16 K		GND
 
-Open config.h file and set display size and your wifi data.
+Connect the potentiometer lateral pins to VCC and GND. Use the potentiometer to set the screen contrast.
+
+Open config.h file and set display size and your wifi access data.
 
 Flash the code to the ESP32. If you use the Arduino ide to do it, just open the esp32-lcd.ino file with the Arduino ide and follow [this instructions](https://randomnerdtutorials.com/getting-started-with-esp32/)
 
