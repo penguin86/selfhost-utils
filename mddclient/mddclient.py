@@ -48,13 +48,13 @@ import json
 
 
 NAME = 'mddclient'
-VERSION = '0.1'
+VERSION = '0.2'
 DESCRIPTION = 'A DynamicDns client like ddclient, but supporting multiple (sub)domains'
 STATUS_FILE = '/tmp/mddclient.tmp'
 CHECKIP_REQUEST_ADDR = 'http://checkip.dyndns.org'
 CHECKIP_RESPONSE_PARSER = '<body>Current IP Address: (\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3})</body>'
 DDCLIENT2_REQUEST_ADDR = "https://{}/nic/update?system=dyndns&hostname={}&myip={}"
-DDCLIENT2_RESPONSE_PARSER = '^(nochg|good) (\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3})$'
+DDCLIENT2_RESPONSE_PARSER = '^(nochg|no_change|good) (\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3})$'
 USER_AGENT = 'Selfhost Utils Mddclient ' + VERSION
 
 class Main:
@@ -121,11 +121,7 @@ class Main:
 
 	def getCurrentIp(self):
 		'''Obtains current IP from checkip.dyndns.org'''
-		try:
-			response = requests.get(CHECKIP_REQUEST_ADDR)
-		except Exception as e:
-			self._log.error('Unable to obtain new IP addr: connection error: {}'.format(e))
-			return
+		response = requests.get(CHECKIP_REQUEST_ADDR)
 
 		match = re.search(CHECKIP_RESPONSE_PARSER, response.text, re.MULTILINE)
 		if not match:
@@ -159,7 +155,7 @@ class Main:
 		if operationResult == 'good':
 			# Success!
 			return ipAddr
-		elif operationResult == 'nochg':
+		elif operationResult == 'nochg' or operationResult == 'no_change':
 			# Should not happen: IP didn't need update
 			self._log.warning('Ip addres didn\'t need update: this should happen only at first run')
 			return ipAddr
@@ -182,7 +178,7 @@ class Main:
 		elif operationResult == '911':
 			raise Exception('There is a problem or scheduled maintenance on server side')
 		else:
-			raise Exception('Server returned an unknown result code: {}}'.format(operationResult))
+			raise Exception('Server returned an unknown result code: {}'.format(operationResult))
 
 
 class Status:
@@ -268,7 +264,11 @@ if __name__ == '__main__':
 		level = logging.WARNING
 	else:
 		level = logging.INFO
-	logging.basicConfig(level=level, format='%(asctime)s %(message)s')
+	logging.basicConfig(
+		format='%(asctime)s %(levelname)-8s %(message)s',
+		level=level,
+		datefmt='%Y-%m-%d %H:%M:%S'
+	)
 
 	try:
 		main = Main(args.configFile)
